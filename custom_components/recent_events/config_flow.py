@@ -1,6 +1,7 @@
 from homeassistant import config_entries
 from homeassistant.helpers import selector
 import voluptuous as vol
+from homeassistant.core import callback
 
 from .const import DOMAIN, CONF_CALENDAR_ID, CONF_EVENT_COUNT, DEFAULT_EVENT_COUNT
 
@@ -11,22 +12,39 @@ class RecentEventsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         
         if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_CALENDAR_ID])
-            self._abort_if_unique_id_configured()
-            
-            return self.async_create_entry(
-                title=f"{user_input[CONF_CALENDAR_ID]} Events",
-                data={
-                    CONF_CALENDAR_ID: user_input[CONF_CALENDAR_ID],
-                    CONF_EVENT_COUNT: int(user_input[CONF_EVENT_COUNT])  # 转换为整数
-                }
-            )
+            try:
+                # 验证日历实体
+                if not self.hass.states.get(user_input[CONF_CALENDAR_ID]):
+                    errors[CONF_CALENDAR_ID] = "entity_not_found"
+                
+                # 验证事件数量
+                event_count = int(user_input[CONF_EVENT_COUNT])
+                if not 1 <= event_count <= 10:
+                    errors[CONF_EVENT_COUNT] = "invalid_count"
+
+                if not errors:
+                    await self.async_set_unique_id(user_input[CONF_CALENDAR_ID])
+                    self._abort_if_unique_id_configured()
+                    
+                    return self.async_create_entry(
+                        title=f"{user_input[CONF_CALENDAR_ID]} Events",
+                        data={
+                            CONF_CALENDAR_ID: user_input[CONF_CALENDAR_ID],
+                            CONF_EVENT_COUNT: event_count
+                        }
+                    )
+
+            except ValueError:
+                errors[CONF_EVENT_COUNT] = "invalid_count"
 
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_CALENDAR_ID): selector.EntitySelector(
-                    selector.EntitySelectorConfig(domain="calendar", multiple=False)
+                    selector.EntitySelectorConfig(
+                        domain="calendar",
+                        multiple=False
+                    )
                 ),
                 vol.Required(
                     CONF_EVENT_COUNT,
@@ -36,15 +54,18 @@ class RecentEventsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         min=1,
                         max=10,
                         mode="box",
-                        step=1  # 强制整数输入
+                        step=1
                     )
                 )
             }),
-            errors=errors
+            errors=errors,
+            description_placeholders={
+                "error_info": ", ".join(errors.values()) if errors else ""
+            }
         )
 
     @staticmethod
-    @config_entries.HANDLERS.register(DOMAIN)
+    @callback
     def async_get_options_flow(config_entry):
         return RecentEventsOptionsFlow(config_entry)
 
@@ -53,10 +74,17 @@ class RecentEventsOptionsFlow(config_entries.OptionsFlow):
         self.config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
+        errors = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data={
-                CONF_EVENT_COUNT: int(user_input[CONF_EVENT_COUNT])  # 转换为整数
-            })
+            try:
+                event_count = int(user_input[CONF_EVENT_COUNT])
+                if 1 <= event_count <= 10:
+                    return self.async_create_entry(title="", data={
+                        CONF_EVENT_COUNT: event_count
+                    })
+                errors[CONF_EVENT_COUNT] = "invalid_count"
+            except ValueError:
+                errors[CONF_EVENT_COUNT] = "invalid_count"
 
         return self.async_show_form(
             step_id="init",
@@ -69,8 +97,9 @@ class RecentEventsOptionsFlow(config_entries.OptionsFlow):
                         min=1,
                         max=10,
                         mode="box",
-                        step=1  # 强制整数输入
+                        step=1
                     )
                 )
-            })
+            }),
+            errors=errors
         )
