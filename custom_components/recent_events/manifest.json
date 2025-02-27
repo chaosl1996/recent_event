@@ -2,6 +2,7 @@
   "domain": "recent_events",
   "name": "Recent Calendar Events",
   "version": "1.0.0",
+  "config_flow": true, 
   "documentation": "https://github.com/chaosl1996/recent_event", 
   "dependencies": ["calendar"],
   "codeowners": ["@chaosl1996"],
