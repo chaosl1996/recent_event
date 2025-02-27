@@ -44,6 +44,7 @@ class RecentEventSensor(SensorEntity):
                 "calendar",
                 "get_events",
                 {"entity_id": self._config[CONF_CALENDAR_ENTITY]},
+                blocking=True,
                 return_response=True
             )
             
