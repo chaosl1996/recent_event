@@ -1,5 +1,4 @@
-from homeassistant.const  import CONF_ENTITY_ID, CONF_NAME 
- 
-DOMAIN = "recent_events"
+DOMAIN = "recent_event"
+DEFAULT_EVENT_COUNT = 3
+CONF_CALENDAR_ENTITY = "calendar_entity"
 CONF_EVENT_COUNT = "event_count"
-DEFAULT_NAME = "Recent Events"
