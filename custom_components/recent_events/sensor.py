@@ -44,7 +44,7 @@ class RecentEventSensor(SensorEntity):
                 "calendar",
                 "get_events",
                 {"entity_id": self._config[CONF_CALENDAR_ENTITY]},
-                return_result=True
+                return_response=True
             )
             
             now = dt_util.now()
