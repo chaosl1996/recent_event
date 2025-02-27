@@ -10,7 +10,10 @@ class RecentEventConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         calendars = self.hass.states.async_entity_ids(CALENDAR_DOMAIN)
         
-        if user_input:
+        if not calendars:
+            return self.async_abort(reason="no_calendars")
+        
+        if user_input is not None:
             return self.async_create_entry(
                 title=f"Recent Events - {user_input[CONF_CALENDAR_ENTITY]}",
                 data=user_input
@@ -20,7 +23,7 @@ class RecentEventConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_CALENDAR_ENTITY): vol.In(
-                    {eid: eid.split('.') for eid in calendars}
+                    {eid: eid.split('.')[1] for eid in calendars}
                 ),
                 vol.Required(
                     CONF_EVENT_COUNT, 
