@@ -2,9 +2,12 @@ from datetime import timedelta
 from homeassistant.helpers.entity import Entity
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from .const import DOMAIN, CONF_CALENDAR_ENTITY, CONF_EVENT_COUNT
 
-class RecentEventSensor(Entity):
+class RecentEventSensor(SensorEntity):
     _attr_icon = "mdi:calendar-text"
     _attr_should_poll = False
 
@@ -61,3 +64,11 @@ class RecentEventSensor(Entity):
                 } for event in self._events
             ]
         }
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up the sensor platform."""
+    config = entry.data
+    sensor = RecentEventSensor(hass, config)
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = sensor
+    hass.async_add_job(hass.config_entries.async_forward_entry_setup(entry, "sensor"))
+    return True
