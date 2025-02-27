@@ -1,12 +1,19 @@
-from homeassistant.config_entries import ConfigEntry
+import logging
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN
+from homeassistant.helpers.typing import ConfigType
+from .sensor import RecentEventSensor
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+_LOGGER = logging.getLogger(__name__)
+
+def setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the recent event integration."""
+    _LOGGER.info("Setting up recent event integration")
+
+    # Register the sensor platform
     hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+        hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": "integration"}
+        )
     )
-    return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    return await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+    return True
