@@ -3,14 +3,43 @@
         "step": {
             "user": {
                 "data": {
-                    "calendar_id": "Calendar",
-                    "event_count": "Number of events to display"
+                    "calendar_id": "Calendar Entity",
+                    "event_count": "Number of Events to Display"
                 },
-                "description": "Select a calendar and configure how many recent events to display."
+                "description": "Configure your recent calendar events display.\n\n**Note**: The calendar entity must be properly configured first.",
+                "title": "Recent Calendar Events Setup"
             }
         },
         "abort": {
-            "already_configured": "This calendar is already configured"
+            "already_configured": "This calendar is already configured",
+            "entity_not_found": "Selected calendar entity not found or unavailable",
+            "invalid_entity": "The selected entity is not a valid calendar"
+        },
+        "error": {
+            "invalid_count": "Number of events must be between 1-10",
+            "service_error": "Failed to communicate with calendar service",
+            "unknown_error": "Unexpected configuration error"
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "event_count": "Number of Events to Display"
+                },
+                "description": "Adjust the number of recent events to display",
+                "title": "Update Recent Events Settings"
+            }
+        }
+    },
+    "entity": {
+        "sensor": {
+            "recent_event": {
+                "state": {
+                    "no_event": "No upcoming events"
+                },
+                "name": "Recent Calendar Event"
+            }
         }
     }
 }
