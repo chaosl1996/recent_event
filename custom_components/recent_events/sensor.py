@@ -1,8 +1,10 @@
 import logging
+import asyncio
 from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
+from homeassistant.exceptions import ServiceNotFound
 from .const import DOMAIN, CONF_CALENDAR_ID, CONF_EVENT_COUNT
 
 _LOGGER = logging.getLogger(__name__)
@@ -12,6 +14,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     calendar_id = config_entry.data[CONF_CALENDAR_ID]
     event_count = int(config_entry.data[CONF_EVENT_COUNT])
     
+    if not hass.states.get(calendar_id):
+        _LOGGER.error("Calendar entity %s not found during setup", calendar_id)
+        return False
+
     sensors = [
         RecentCalendarEventSensor(hass, config_entry, index)
         for index in range(event_count)
@@ -61,35 +67,67 @@ class RecentCalendarEventSensor(SensorEntity):
             calendar_id = self._config_entry.data[CONF_CALENDAR_ID]
             event_count = int(self._config_entry.data[CONF_EVENT_COUNT])
 
-            # 修复的服务调用参数
-            events = await self._hass.services.async_call(
-                "calendar",
-                "get_events",
-                {
-                    "entity_id": calendar_id,
-                    "start_date_time": dt_util.now().isoformat(),
-                    "end_date_time": (dt_util.now() + timedelta(days=365)).isoformat()
-                },
-                blocking=True,  # 关键修复点
-                return_response=True
+            if not self._hass.states.get(calendar_id):
+                _LOGGER.error("Calendar entity %s not found", calendar_id)
+                self._events = []
+                self.async_write_ha_state()
+                return
+
+            try:
+                events = await self._hass.services.async_call(
+                    "calendar",
+                    "get_events",
+                    {
+                        "entity_id": calendar_id,
+                        "start_date_time": dt_util.now().isoformat(),
+                        "end_date_time": (dt_util.now() + timedelta(days=365)).isoformat()
+                    },
+                    blocking=True,
+                    return_response=True
+                )
+            except ServiceNotFound as e:
+                _LOGGER.error("Calendar service not available: %s", str(e))
+                return
+            except asyncio.TimeoutError:
+                _LOGGER.warning("Calendar service call timed out")
+                return
+
+            if not isinstance(events, dict):
+                _LOGGER.error("Invalid response format: %s", type(events))
+                self._events = []
+                self.async_write_ha_state()
+                return
+
+            calendar_events = events.get(calendar_id, [])
+            if not isinstance(calendar_events, list):
+                _LOGGER.error("Expected list of events, got %s", type(calendar_events))
+                self._events = []
+                self.async_write_ha_state()
+                return
+
+            valid_events = []
+            for event in calendar_events:
+                if isinstance(event, dict) and event.get("start"):
+                    start = event["start"]
+                    if isinstance(start, dict) and (start.get("dateTime") or start.get("date")):
+                        valid_events.append(event)
+                else:
+                    _LOGGER.debug("Invalid event format: %s", type(event))
+
+            sorted_events = sorted(
+                valid_events,
+                key=lambda x: (
+                    x.get("start", {}).get("dateTime") or 
+                    x.get("start", {}).get("date") or 
+                    ""
+                )
             )
 
-            if events and calendar_id in events:
-                valid_events = [
-                    event for event in events[calendar_id]
-                    if event.get("start") and event.get("start").get("dateTime")
-                ]
-                sorted_events = sorted(
-                    valid_events,
-                    key=lambda x: x["start"]["dateTime"]
-                )
-                self._events = sorted_events[:event_count]
-            else:
-                self._events = []
-
+            self._events = sorted_events[:event_count]
             self.async_write_ha_state()
+
         except Exception as e:
-            _LOGGER.error("Error updating events: %s", str(e))
+            _LOGGER.error("Error updating events: %s", str(e), exc_info=True)
 
     def _parse_datetime(self, dt_dict):
         """Parse datetime from calendar event format"""
