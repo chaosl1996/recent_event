@@ -1,11 +1,21 @@
 from datetime import timedelta
-from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from .const import DOMAIN, CONF_CALENDAR_ENTITY, CONF_EVENT_COUNT
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    config_entry: ConfigEntry,
+    async_add_entities
+) -> bool:
+    """设置传感器平台"""
+    config = config_entry.data
+    sensor = RecentEventSensor(hass, config)
+    async_add_entities([sensor], update_before_add=True)
+    return True
 
 class RecentEventSensor(SensorEntity):
     _attr_icon = "mdi:calendar-text"
@@ -19,6 +29,7 @@ class RecentEventSensor(SensorEntity):
         self._attr_unique_id = f"recent_events_{config[CONF_CALENDAR_ENTITY]}"
 
     async def async_added_to_hass(self):
+        """注册自动更新"""
         await self.async_update()
         async_track_time_interval(
             self.hass,
@@ -27,6 +38,7 @@ class RecentEventSensor(SensorEntity):
         )
 
     async def async_update(self, now=None):
+        """更新事件数据"""
         try:
             events = await self.hass.services.async_call(
                 "calendar",
@@ -37,7 +49,7 @@ class RecentEventSensor(SensorEntity):
             
             now = dt_util.now()
             self._events = sorted(
-                [e for e in events if e.start >= now],
+                [e for e in events if e.end >= now],  # 包含进行中的事件
                 key=lambda x: x.start
             )[:self._config[CONF_EVENT_COUNT]]
             
@@ -49,10 +61,12 @@ class RecentEventSensor(SensorEntity):
 
     @property
     def state(self):
+        """当前状态值"""
         return len(self._events)
 
     @property
     def extra_state_attributes(self):
+        """扩展属性"""
         return {
             "events": [
                 {
@@ -64,11 +78,3 @@ class RecentEventSensor(SensorEntity):
                 } for event in self._events
             ]
         }
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up the sensor platform."""
-    config = entry.data
-    sensor = RecentEventSensor(hass, config)
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = sensor
-    hass.async_add_job(hass.config_entries.async_forward_entry_setup(entry, "sensor"))
-    return True
