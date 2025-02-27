@@ -5,6 +5,7 @@ from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ServiceNotFound
+from homeassistant.helpers import entity_registry as er
 from .const import DOMAIN, CONF_CALENDAR_ID, CONF_EVENT_COUNT
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,10 +63,12 @@ class RecentEventSensor(SensorEntity):
         self._max_events = max_events
         self._events = []
         
-        # 显式设置实体唯一标识
+        # 生成符合规范的object_id
+        config_entry_id = config_entry.entry_id.split("_")[-1][:8]  # 取entry_id后8位
+        safe_object_id = f"recent_event_{config_entry_id}_{index}"
+        self.entity_id = f"sensor.{safe_object_id}"
+        
         self._attr_unique_id = f"{config_entry.entry_id}_event_{index}"
-        # 生成符合规范的entity_id
-        self.entity_id = f"sensor.recent_event_{config_entry.entry_id}_{index}"
         
         self._attr_device_info = {
             "identifiers": {(DOMAIN, config_entry.entry_id)},
@@ -147,7 +150,7 @@ class RecentEventSensor(SensorEntity):
 
     async def async_added_to_hass(self):
         """实体被添加到Home Assistant时调用"""
-        await super().async_added_to_hass()  # 添加父类调用
+        await super().async_added_to_hass()
         self.async_on_remove(
             async_track_time_interval(
                 self._hass,
