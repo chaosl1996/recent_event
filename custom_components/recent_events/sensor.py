@@ -10,7 +10,7 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the sensor platform."""
     calendar_id = config_entry.data[CONF_CALENDAR_ID]
-    event_count = config_entry.data[CONF_EVENT_COUNT]
+    event_count = int(config_entry.data[CONF_EVENT_COUNT])  # 转换为整数
     
     sensors = [
         RecentCalendarEventSensor(hass, config_entry, index)
@@ -59,7 +59,7 @@ class RecentCalendarEventSensor(SensorEntity):
     async def async_update(self, now=None):
         try:
             calendar_id = self._config_entry.data[CONF_CALENDAR_ID]
-            event_count = self._config_entry.data[CONF_EVENT_COUNT]
+            event_count = int(self._config_entry.data[CONF_EVENT_COUNT])  # 确保整数
 
             events = await self._hass.services.async_call(
                 "calendar",
