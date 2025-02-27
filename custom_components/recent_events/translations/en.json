@@ -1,0 +1,16 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Recent Events",
+        "data": {
+          "calendar_entity": "Calendar",
+          "event_count": "Number of Events to Show"
+        }
+      }
+    },
+    "abort": {
+      "no_calendars": "No calendar entities found"
+    }
+  }
+}
