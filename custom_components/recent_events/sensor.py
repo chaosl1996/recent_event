@@ -157,7 +157,7 @@ class RecentEventSensor(SensorEntity):
                 
             # 解析时间
             start = self._parse_calendar_time(event.get("start", {}))
-            end = self._parse_calendar_time(event.get("end", start)))
+            end = self._parse_calendar_time(event.get("end", start))
             
             if not start or not end:
                 continue
