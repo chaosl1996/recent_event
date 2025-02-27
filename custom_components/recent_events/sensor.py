@@ -36,9 +36,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.error("Entity %s is not a calendar", calendar_id)
         return False
 
-    # 创建传感器实例
+    # 创建传感器实例时传递转换后的整数值
     sensors = [
-        RecentEventSensor(hass, config_entry, index)
+        RecentEventSensor(
+            hass=hass,
+            config_entry=config_entry,
+            index=index,
+            max_events=event_count  # 新增参数传递
+        )
         for index in range(event_count)
     ]
     
@@ -50,10 +55,11 @@ class RecentEventSensor(SensorEntity):
     _attr_icon = "mdi:calendar"
     _attr_should_poll = False
 
-    def __init__(self, hass, config_entry, index):
+    def __init__(self, hass, config_entry, index, max_events):  # 新增max_events参数
         self._hass = hass
         self._config_entry = config_entry
         self._index = index
+        self._max_events = max_events  # 存储转换后的整数值
         self._events = []
         
         self._attr_unique_id = f"{config_entry.entry_id}_event_{index}"
@@ -93,9 +99,12 @@ class RecentEventSensor(SensorEntity):
             events = await self._fetch_events(calendar_id)
             valid_events = self._validate_events(events.get(calendar_id, []))
             
-            self._events = sorted(valid_events, 
-                key=lambda x: x["start"].get("dateTime", x["start"].get("date")))[:self._config_entry.data[CONF_EVENT_COUNT]]
-                
+            # 使用存储的整数进行切片
+            self._events = sorted(
+                valid_events,
+                key=lambda x: x["start"].get("dateTime", x["start"].get("date"))
+            )[:self._max_events]  # 使用转换后的整数值
+            
             self.async_write_ha_state()
         except Exception as e:
             _LOGGER.error("Update failed: %s", str(e))
