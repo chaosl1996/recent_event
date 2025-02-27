@@ -16,7 +16,10 @@ class RecentEventsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             
             return self.async_create_entry(
                 title=f"{user_input[CONF_CALENDAR_ID]} Events",
-                data=user_input
+                data={
+                    CONF_CALENDAR_ID: user_input[CONF_CALENDAR_ID],
+                    CONF_EVENT_COUNT: int(user_input[CONF_EVENT_COUNT])  # 转换为整数
+                }
             )
 
         return self.async_show_form(
@@ -32,7 +35,8 @@ class RecentEventsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     selector.NumberSelectorConfig(
                         min=1,
                         max=10,
-                        mode="box"
+                        mode="box",
+                        step=1  # 强制整数输入
                     )
                 )
             }),
@@ -50,7 +54,9 @@ class RecentEventsOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data={
+                CONF_EVENT_COUNT: int(user_input[CONF_EVENT_COUNT])  # 转换为整数
+            })
 
         return self.async_show_form(
             step_id="init",
@@ -62,7 +68,8 @@ class RecentEventsOptionsFlow(config_entries.OptionsFlow):
                     selector.NumberSelectorConfig(
                         min=1,
                         max=10,
-                        mode="box"
+                        mode="box",
+                        step=1  # 强制整数输入
                     )
                 )
             })
