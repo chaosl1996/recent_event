@@ -1,0 +1,16 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "data": {
+                    "calendar_id": "Calendar",
+                    "event_count": "Number of events to display"
+                },
+                "description": "Select a calendar and configure how many recent events to display."
+            }
+        },
+        "abort": {
+            "already_configured": "This calendar is already configured"
+        }
+    }
+}

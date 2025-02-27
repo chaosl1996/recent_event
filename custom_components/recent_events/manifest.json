@@ -1,0 +1,12 @@
+{
+    "domain": "recent_events",
+    "name": "Recent Calendar Events",
+    "version": "1.0.0",
+    "codeowners": ["@chaosl1996"],
+    "config_flow": true,
+    "documentation": "https://github.com/chaosl1996/recent_events",
+    "dependencies": ["calendar"],
+    "iot_class": "cloud_polling",
+    "requirements": [],
+    "issue_tracker": "https://github.com/chaosl1996/recent_events/issues"
+}
