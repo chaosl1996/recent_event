@@ -1,14 +1,25 @@
 import logging
 import asyncio
+import re
 from datetime import timedelta
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import ServiceNotFound
-from homeassistant.helpers import entity_registry as er
 from .const import DOMAIN, CONF_CALENDAR_ID, CONF_EVENT_COUNT
 
 _LOGGER = logging.getLogger(__name__)
+
+def sanitize_entity_id(input_str):
+    """生成符合规范的entity_id字符串"""
+    # 转换为小写
+    sanitized = input_str.lower()
+    # 替换非法字符为下划线
+    sanitized = re.sub(r"[^a-z0-9_]", "_", sanitized)
+    # 去除连续下划线
+    sanitized = re.sub(r"_+", "_", sanitized)
+    # 去除首尾非字母数字字符
+    return sanitized.strip("_")
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up sensors from config entry."""
@@ -63,12 +74,12 @@ class RecentEventSensor(SensorEntity):
         self._max_events = max_events
         self._events = []
         
-        # 生成符合规范的object_id
-        config_entry_id = config_entry.entry_id.split("_")[-1][:8]  # 取entry_id后8位
-        safe_object_id = f"recent_event_{config_entry_id}_{index}"
+        # 生成规范化的entity_id
+        raw_id = f"{config_entry.entry_id}_event_{index}"
+        safe_object_id = sanitize_entity_id(f"recent_event_{raw_id}")
         self.entity_id = f"sensor.{safe_object_id}"
         
-        self._attr_unique_id = f"{config_entry.entry_id}_event_{index}"
+        self._attr_unique_id = raw_id  # 保持原始唯一性
         
         self._attr_device_info = {
             "identifiers": {(DOMAIN, config_entry.entry_id)},
