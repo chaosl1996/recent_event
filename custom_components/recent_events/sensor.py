@@ -12,9 +12,22 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up sensors from config entry."""
     calendar_id = config_entry.data[CONF_CALENDAR_ID]
-    event_count = config_entry.data[CONF_EVENT_COUNT]
     
-    # Validate calendar entity
+    # 类型转换和验证
+    try:
+        raw_value = config_entry.data[CONF_EVENT_COUNT]
+        event_count = int(float(raw_value))
+        if not 1 <= event_count <= 10:
+            raise ValueError(f"Invalid event count: {event_count}")
+    except (TypeError, ValueError) as e:
+        _LOGGER.error(
+            "Invalid event count configuration: Value '%s' error: %s",
+            raw_value,
+            str(e)
+        )
+        return False
+
+    # 验证日历实体
     if not (state := hass.states.get(calendar_id)):
         _LOGGER.error("Calendar entity %s not found", calendar_id)
         return False
@@ -23,13 +36,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _LOGGER.error("Entity %s is not a calendar", calendar_id)
         return False
 
-    # Create sensor instances
+    # 创建传感器实例
     sensors = [
         RecentEventSensor(hass, config_entry, index)
         for index in range(event_count)
     ]
     
     async_add_entities(sensors, True)
+    _LOGGER.debug("Successfully created %d event sensors", event_count)
 
 class RecentEventSensor(SensorEntity):
     _attr_has_entity_name = True
@@ -75,7 +89,7 @@ class RecentEventSensor(SensorEntity):
         try:
             calendar_id = self._config_entry.data[CONF_CALENDAR_ID]
             
-            # Fetch events
+            # 获取事件
             events = await self._fetch_events(calendar_id)
             valid_events = self._validate_events(events.get(calendar_id, []))
             
@@ -87,7 +101,7 @@ class RecentEventSensor(SensorEntity):
             _LOGGER.error("Update failed: %s", str(e))
 
     async def _fetch_events(self, calendar_id):
-        """Retrieve events from calendar service."""
+        """从日历服务获取事件"""
         try:
             return await self._hass.services.async_call(
                 "calendar",
@@ -101,11 +115,11 @@ class RecentEventSensor(SensorEntity):
                 return_response=True
             )
         except (ServiceNotFound, asyncio.TimeoutError) as e:
-            _LOGGER.error("Service error: %s", str(e))
+            _LOGGER.error("服务错误: %s", str(e))
             return {}
 
     def _validate_events(self, events):
-        """Filter valid calendar events."""
+        """验证日历事件有效性"""
         return [e for e in events if isinstance(e, dict) and e.get("start")]
 
     def _parse_datetime(self, dt_dict):
